@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Http\Controllers\Controller;
-use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 class LoginController extends Controller
 {
     public function __construct()
@@ -16,38 +15,20 @@ class LoginController extends Controller
 
     public function login(Request $request)
     {
-        try {
-            // Validate user
-            $credentials = $request->validate([
-                'email' => ['required', 'email'],
-                'password' => ['required']
-            ]);
-
-            // Check email
-            $user = User::where('email', $credentials['email'])->first();
-
-            // Check password
-            if (!$user || !Hash::check($credentials['password'], $user->password)) {
-                
-                // If fails, send response
-                return response()->json([
-                    'message' => 'The provided credentials do not match our records.'
-                ], 401);
-            }
-
-            // If succeed, get token
-            $token = $user->createToken('my-token')->plainTextToken;
-
-            // Send response
-            $response = [
-                'user' => $user,
-                'token' => $token,
-            ];
-
-            return response()->json($response, 201);
-            
-        } catch (\Throwable $th) {
-            throw $th;
+        // Validation
+        $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required']
+        ]);
+    
+        // If success send response
+        if (Auth::attempt($request->only('email', 'password'))) {
+            return response()->json(Auth::user(), 200);
         }
+    
+        // If fail throw exception
+        throw ValidationException::withMessages([
+            'email' => 'The provided credentails are incorect.'
+        ]);
     }
 }
